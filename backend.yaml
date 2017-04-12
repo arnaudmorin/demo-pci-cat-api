@@ -1,0 +1,10 @@
+#!/bin/bash
+
+apt-get update
+apt-get -y install git python-pip python-dev
+pip install flask
+
+cd /root
+git clone https://github.com/arnaudmorin/puppet-demoflask.git
+cd /root/puppet-demoflask
+./start.py &
