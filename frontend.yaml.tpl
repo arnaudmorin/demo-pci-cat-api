@@ -1,8 +1,25 @@
 #!/bin/bash
+# Setup logging stdout + stderr to logfile
+log_file="/var/log/postinstall.log"
 
+function log_handler {
+  while IFS='' read -r output; do
+    echo $output
+    echo "$(date) - $output" >> $log_file
+  done
+}
+
+exec &> >(log_handler)
+
+echo "Requesting IP from DHCP"
+ip link set eth1 up
+dhclient eth1
+
+echo "Update and install some packages"
 apt-get update
 apt-get -y install git haproxy vim
 
+echo "Configuring HAproxy"
 cat <<EOF > /etc/haproxy/haproxy.cfg
 global
     log /dev/log    local0
@@ -42,8 +59,12 @@ defaults
 
 listen http-in
     bind *:80
+    stats enable
+    stats show-node
+    stats uri /stats
 ${nodes}
 
 EOF
 
+echo "Starting HAproxy"
 service haproxy restart

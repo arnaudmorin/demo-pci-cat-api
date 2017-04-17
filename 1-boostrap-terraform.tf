@@ -18,13 +18,17 @@ resource "openstack_compute_keypair_v2" "keypairs" {
 #
 # Create the subnets
 resource "openstack_networking_subnet_v2" "subnets" {
-  name          = "subnet_${element(var.regions, count.index)}"
-  count         = "${length(var.regions)}"
-  network_id    = "${element(var.networks, count.index)}"
-  cidr          = "192.168.1.0/24"
-  region        = "${element(var.regions, count.index)}"
-  no_gateway    = "true"
-  enable_dhcp   = "true"
+  name              = "subnet_${element(var.regions, count.index)}"
+  count             = "${length(var.regions)}"
+  network_id        = "${element(var.networks, count.index)}"
+  cidr              = "192.168.1.0/24"
+  region            = "${element(var.regions, count.index)}"
+  allocation_pools  = {
+    start   = "192.168.1.1${count.index}0"
+    end     = "192.168.1.1${count.index}9"
+  }
+  no_gateway        = "true"
+  enable_dhcp       = "true"
 }
 
 # Create a router, to give backends access to internet, through NAT
@@ -55,7 +59,7 @@ resource "openstack_compute_instance_v2" "router" {
 #
 # Create one backend per region
 resource "openstack_compute_instance_v2" "backends" {
-  name          = "${format("backend-%02d", count.index+1)}"
+  name          = "${format("backend-%s", element(var.regions, count.index))}"
   count         = "${length(var.regions)}"
   region        = "${element(var.regions, count.index)}"
   image_name    = "Debian 8"
@@ -89,7 +93,7 @@ resource "openstack_compute_instance_v2" "backends" {
 data "template_file" "frontend_user_data" {
   template = "${file("frontend.yaml.tpl")}"
   vars {
-    nodes = "${join("\n", formatlist("    server %s %s:5000", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
+    nodes = "${join("\n", formatlist("    server %s %s:5000 check", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
   }
 }
 
@@ -116,6 +120,10 @@ resource "openstack_compute_instance_v2" "frontend" {
 #
 # OUTPUT
 #
+output "router" {
+  value = "${format("%s", openstack_compute_instance_v2.router.access_ip_v4)}"
+}
+
 output "backends" {
   value = "${join("\n", formatlist("http://%s:5000", openstack_compute_instance_v2.backends.*.access_ip_v4))}"
 }
