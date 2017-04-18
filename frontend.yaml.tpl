@@ -17,7 +17,7 @@ dhclient eth1
 
 echo "Update and install some packages"
 apt-get update
-apt-get -y install git haproxy vim
+apt-get -y install git haproxy hatop vim mtr fping
 
 echo "Configuring HAproxy"
 cat <<EOF > /etc/haproxy/haproxy.cfg
