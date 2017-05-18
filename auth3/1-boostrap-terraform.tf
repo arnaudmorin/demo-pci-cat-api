@@ -4,7 +4,7 @@ provider "openstack" {
   user_name = "nUv3vY3TjWDV"
   tenant_name = "6837909462521441"
   tenant_id = "0d899a6f76d74760a06919233ed0ec51"
-  password  = "FNTyVZhGAGZxpAgaGytvXDEvQdNxpmqf"
+  password  = "pass"
   auth_url  = "https://auth.cloud.ovh.net"
   domain_name = "Default"
 }
