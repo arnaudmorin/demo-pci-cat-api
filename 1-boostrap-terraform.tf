@@ -11,11 +11,11 @@ provider "ovh" {
 #
 # SSH key
 #
-resource "openstack_compute_keypair_v2" "keypairs" {
-  name          = "terra-arnaud-ovh"
+resource "openstack_compute_keypair_v2" "ssh_keys" {
+  name          = "${var.ssh_key["name"]}"
   count         = "${length(var.regions)}"
   region        = "${element(var.regions, count.index)}"
-  public_key    = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDOYsxhRRwC4+uKhJLuoPpNhf1jD97R/S5KnegmCF45QxnSbwfJq4XxBMLc8+BOqP1HLAIRW6HfdZMxkpVVi0aVdYSjJdtBA/9ImceqB0uvXP8Zhsivmr+/u/PB30bUS1/yblOAT62Hxu17KYv79g1FhJa3sJNQ5InzgDOUmLMCYczacMKpVQUFoj92zO3HSe0SXGSBh4++So4rcvD5Dywz6bmMbM/mtzSym95D53RwsJ/9a3CQa3BqIqoRNX/zjGS4C7tpqi1AlwFyBjJzOjqjwDYcTfune22DLnotMX06Salnhp1MZHuhffyUdu8Bkk3RjMiVtTwOECZGr59Ovj5aE2J/xPeDiCWg1J/ois0Zl4TeVipgWL9p/ULBtVS4LpFHO2GKy10rQfW10oYgclR+gfM9SEq3ZuKZmXHieNDUogHCW1oZRi1M3Z7hJEe6C5dmerx02cXb1CBp1OebmrKxQMBt8QtWpnKEE+74GEUbjyRI8oDGOzdTPhkvH6M1o7WyyWmxLwtFkuQkaKxa5lGju+LXJb9tnAyijjpH1h0BldWuEdfiijuIaRieDj1CBDDnn9Ukcjl1eYqGC0KX3M4rq5EIMHwZ8Nb4Lrb6SqUKWz2RYKKWIsT3rJFa3jKiUVzSODM8cGf0rFTKqXihCdqvfkdAYchKli1U6xaEZdl0zw=="
+  public_key    = "${var.ssh_key["value"]}"
 }
 
 #
@@ -24,124 +24,125 @@ resource "openstack_compute_keypair_v2" "keypairs" {
 
 # Network
 resource "ovh_publiccloud_private_network" "network" {
-  name              = "VLAN"
+  name              = "VLAN_${var.vlan_id}"
   regions           = "${var.regions}"
-  vlan_id           = 168
+  vlan_id           = "${var.vlan_id}"
 }
 
 # Subnet
-resource "openstack_networking_subnet_v2" "subnets" {
-  name              = "subnet_${element(var.regions, count.index)}"
+resource "ovh_publiccloud_private_network_subnet" "subnets" {
   count             = "${length(var.regions)}"
-  network_id        = "ovh_publiccloud_private_network.network.id"
-  cidr              = "192.168.1.0/24"
+  network_id        = "${ovh_publiccloud_private_network.network.id}"
   region            = "${element(var.regions, count.index)}"
-  allocation_pools  = {
-    start   = "192.168.1.1${count.index}0"
-    end     = "192.168.1.1${count.index}9"
-  }
+  network           = "192.168.1.0/24"
+  start             = "192.168.1.1${count.index}0"
+  end               = "192.168.1.1${count.index}9"
   no_gateway        = "true"
-  enable_dhcp       = "true"
+  dhcp              = "true"
 }
 
-## Create a router, to give backends access to internet, through NAT
-#resource "openstack_compute_instance_v2" "router" {
-#  name          = "router"
-#  region        = "SBG3"
-#  image_name    = "Debian 8"
-#  key_pair      = "cat-arnaud-ovh"
-#  flavor_name   = "c2-7"
+# Create a router, to give backends access to internet, through NAT
+resource "openstack_compute_instance_v2" "router" {
+  name          = "router"
+  region        = "${var.regions[0]}"
+  image_name    = "${var.image["name"]}"
+  key_pair      = "${element(openstack_compute_keypair_v2.ssh_keys.*.name, count.index)}"
+  flavor_name   = "${var.flavor}"
+
+  # Network configuration
+  # This VM has double attachement:
+  #  - one public interface to internet
+  #  - one private interface to communicate with backends
+  network       = { name = "Ext-Net" }
+  network       = {
+    name        = "${ovh_publiccloud_private_network.network.name}"
+    fixed_ip_v4 = "192.168.1.1"
+  }
+
+  # Postinstall
+  connection    = { user = "${var.image["user"]}" }
+  user_data     = "${file("router.yaml")}"
+
+  # Ordering
+  # We need subnets before booting the router
+  depends_on    = ["ovh_publiccloud_private_network_subnet.subnets"]
+}
+
 #
-#  # Network configuration
-#  # This VM has double attachement:
-#  #  - one public interface to internet
-#  #  - one private interface to communicate with backends
-#  network       = { name = "Ext-Net" }
-#  network       = {
-#    name        = "VLAN"
-#    fixed_ip_v4 = "192.168.1.1"
-#  }
+# BACKENDS
 #
-#  # Postinstall
-#  connection    = { user = "debian" }
-#  user_data     = "${file("router.yaml")}"
-#}
+# Create one backend per region
+resource "openstack_compute_instance_v2" "backends" {
+  name          = "${format("backend-%s", element(var.regions, count.index))}"
+  count         = "${length(var.regions)}"
+  region        = "${element(var.regions, count.index)}"
+  image_name    = "${var.image["name"]}"
+  key_pair      = "${element(openstack_compute_keypair_v2.ssh_keys.*.name, count.index)}"
+  flavor_name   = "${var.flavor}"
+
+  # Network configuration
+  # This VM has only one interface:
+  #  - private interface to communicate with frontend
+  # Direct access from internet is not possible
+  # Access from VM to internet is possible thanks to router (NAT)
+  network       = {
+    name        = "${ovh_publiccloud_private_network.network.name}"
+    fixed_ip_v4 = "192.168.1.1${count.index+1}"
+  }
+
+  # Postinstall
+  connection    = { user = "${var.image["user"]}" }
+  user_data     = "${file("backend.yaml")}"
+
+  # Ordering
+  # We need router before spawning the backends
+  depends_on    = ["openstack_compute_instance_v2.router"]
+}
+
 #
-##
-## BACKENDS
-##
-## Create one backend per region
-#resource "openstack_compute_instance_v2" "backends" {
-#  name          = "${format("backend-%s", element(var.regions, count.index))}"
-#  count         = "${length(var.regions)}"
-#  region        = "${element(var.regions, count.index)}"
-#  image_name    = "Debian 8"
-#  key_pair      = "cat-arnaud-ovh"
-#  flavor_name   = "c2-7"
+# FRONTEND
 #
-#  # Network configuration
-#  # This VM has only one interface:
-#  #  - private interface to communicate with frontend
-#  # Direct access from internet is not possible
-#  # Access from VM to internet is possible thanks to router (NAT)
-#  network       = {
-#    name        = "VLAN"
-#    fixed_ip_v4 = "192.168.1.1${count.index+1}"
-#  }
+# Create template for frontend user_data
+# The user_data is filled with backends IP before spawning the frontend
+data "template_file" "frontend_user_data" {
+  template = "${file("frontend.yaml.tpl")}"
+  vars {
+    nodes = "${join("\n", formatlist("    server %s %s:5000 check", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
+  }
+}
+
+# Create one frontend
+resource "openstack_compute_instance_v2" "frontend" {
+  name          = "frontend"
+  region        = "${var.regions[0]}"
+  image_name    = "${var.image["name"]}"
+  key_pair      = "${element(openstack_compute_keypair_v2.ssh_keys.*.name, count.index)}"
+  flavor_name   = "${var.flavor}"
+
+  # Network configuration
+  # This VM has double attachement:
+  #  - one public interface to be reachable from internet
+  #  - one private interface to communicate with backends
+  network       = { name = "Ext-Net" }
+  network       = { name = "${ovh_publiccloud_private_network.network.name}" }
+
+  # Postinstall
+  connection    = { user = "${var.image["user"]}" }
+  user_data     = "${data.template_file.frontend_user_data.rendered}"
+}
+
 #
-#  # Postinstall
-#  connection    = { user = "debian" }
-#  user_data     = "${file("backend.yaml")}"
+# OUTPUT
 #
-#  # Ordering
-#  # We need router before spawning the backends
-#  depends_on    = ["openstack_compute_instance_v2.router"]
-#}
-#
-##
-## FRONTEND
-##
-## Create template for frontend user_data
-## The user_data is filled with backends IP before spawning the frontend
-#data "template_file" "frontend_user_data" {
-#  template = "${file("frontend.yaml.tpl")}"
-#  vars {
-#    nodes = "${join("\n", formatlist("    server %s %s:5000 check", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
-#  }
-#}
-#
-## Create one frontend
-#resource "openstack_compute_instance_v2" "frontend" {
-#  name          = "frontend"
-#  region        = "SBG3"
-#  image_name    = "Debian 8"
-#  key_pair      = "cat-arnaud-ovh"
-#  flavor_name   = "c2-7"
-#
-#  # Network configuration
-#  # This VM has double attachement:
-#  #  - one public interface to be reachable from internet
-#  #  - one private interface to communicate with backends
-#  network       = { name = "Ext-Net" }
-#  network       = { name = "VLAN" }
-#
-#  # Postinstall
-#  connection    = { user = "debian" }
-#  user_data     = "${data.template_file.frontend_user_data.rendered}"
-#}
-#
-##
-## OUTPUT
-##
-#output "router" {
-#  value = "${format("%s", openstack_compute_instance_v2.router.access_ip_v4)}"
-#}
-#
-#output "backends" {
-#  value = "${join("\n", formatlist("http://%s:5000", openstack_compute_instance_v2.backends.*.access_ip_v4))}"
-#}
-#
-#output "frontend" {
-#  value = "${format("http://%s", openstack_compute_instance_v2.frontend.access_ip_v4)}"
-#}
+output "router" {
+  value = "${format("%s", openstack_compute_instance_v2.router.access_ip_v4)}"
+}
+
+output "backends" {
+  value = "${join("\n", formatlist("http://%s:5000", openstack_compute_instance_v2.backends.*.access_ip_v4))}"
+}
+
+output "frontend" {
+  value = "${format("http://%s", openstack_compute_instance_v2.frontend.access_ip_v4)}"
+}
 

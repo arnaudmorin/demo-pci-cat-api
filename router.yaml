@@ -15,12 +15,12 @@ exec &> >(log_handler)
 apt-get update
 apt-get -y install git vim
 
-PUB="eth0"
-PRIV="eth1"
+PUB="ens3"
+PRIV="ens4"
 
 echo "Requesting IP from DHCP"
-ip link set eth1 up
-dhclient eth1
+ip link set $PRIV up
+dhclient $PRIV
 
 echo "Grab configured IP"
 
