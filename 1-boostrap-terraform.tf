@@ -3,6 +3,12 @@
 provider "openstack" {
 }
 
+terraform {
+  backend "swift" {
+    path = "terraform-state"
+  }
+}
+
 # Configure the OVH Provider
 # It will also read info from env OVH_xxx
 provider "ovh" {
