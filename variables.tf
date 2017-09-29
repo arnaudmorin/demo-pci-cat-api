@@ -1,8 +1,8 @@
 variable "regions" {
   default = [
+    "GRA3",
     "SBG3",
     "BHS3",
-    "GRA3",
     "WAW1"
   ]
 }
