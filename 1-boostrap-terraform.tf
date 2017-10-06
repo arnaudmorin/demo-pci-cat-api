@@ -5,7 +5,8 @@ provider "openstack" {
 
 terraform {
   backend "swift" {
-    path = "terraform-state"
+    path        = "terraform-state"
+    region_name = "SBG3"
   }
 }
 
