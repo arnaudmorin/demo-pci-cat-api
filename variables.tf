@@ -3,7 +3,8 @@ variable "regions" {
     "GRA3",
     "SBG3",
     "BHS3",
-    "WAW1"
+    "WAW1",
+    "DE1"
   ]
 }
 

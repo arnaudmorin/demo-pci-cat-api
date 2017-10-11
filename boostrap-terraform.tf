@@ -1,13 +1,14 @@
-# Configure the OpenStack Provider
-# It will read info from env OS_xxx
-provider "openstack" {
-}
-
+# Configure terraform itself
 terraform {
   backend "swift" {
     path        = "terraform-state"
     region_name = "SBG3"
   }
+}
+
+# Configure the OpenStack Provider
+# It will read info from env OS_xxx
+provider "openstack" {
 }
 
 # Configure the OVH Provider
@@ -68,7 +69,7 @@ resource "openstack_compute_instance_v2" "router" {
 
   # Postinstall
   connection    = { user = "${var.image["user"]}" }
-  user_data     = "${file("router.sh")}"
+  user_data     = "${file("cloud-init-scripts/router.sh")}"
 
   # Ordering
   # We need subnets before booting the router
@@ -99,7 +100,7 @@ resource "openstack_compute_instance_v2" "backends" {
 
   # Postinstall
   connection    = { user = "${var.image["user"]}" }
-  user_data     = "${file("backend.sh")}"
+  user_data     = "${file("cloud-init-scripts/backend.sh")}"
 
   # Ordering
   # We need router before spawning the backends
@@ -112,7 +113,7 @@ resource "openstack_compute_instance_v2" "backends" {
 # Create template for frontend user_data
 # The user_data is filled with backends IP before spawning the frontend
 data "template_file" "frontend_user_data" {
-  template = "${file("frontend.sh.tpl")}"
+  template = "${file("cloud-init-scripts/frontend.sh.tpl")}"
   vars {
     nodes = "${join("\n", formatlist("    server %s %s:5000 check", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
   }
