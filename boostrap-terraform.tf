@@ -68,7 +68,7 @@ resource "openstack_compute_instance_v2" "router" {
 
   # Postinstall
   connection    = { user = "${var.image["user"]}" }
-  user_data     = "${file("router.yaml")}"
+  user_data     = "${file("router.sh")}"
 
   # Ordering
   # We need subnets before booting the router
@@ -99,7 +99,7 @@ resource "openstack_compute_instance_v2" "backends" {
 
   # Postinstall
   connection    = { user = "${var.image["user"]}" }
-  user_data     = "${file("backend.yaml")}"
+  user_data     = "${file("backend.sh")}"
 
   # Ordering
   # We need router before spawning the backends
@@ -112,7 +112,7 @@ resource "openstack_compute_instance_v2" "backends" {
 # Create template for frontend user_data
 # The user_data is filled with backends IP before spawning the frontend
 data "template_file" "frontend_user_data" {
-  template = "${file("frontend.yaml.tpl")}"
+  template = "${file("frontend.sh.tpl")}"
   vars {
     nodes = "${join("\n", formatlist("    server %s %s:5000 check", openstack_compute_instance_v2.backends.*.name, openstack_compute_instance_v2.backends.*.access_ip_v4))}"
   }

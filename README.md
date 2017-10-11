@@ -2,9 +2,10 @@
 This is a demo using OVH Public Cloud Infrastructure, Terraform and cloud-init stuff
 
 ## First boot a backend to test
-    bash 0-boostrap-backend-only.sh
+    bash boostrap-backend-only.sh
 
 ## Second, create infra with terraform
+    terraform init
     terraform apply
 
 ## Check ping stats between frontend and backend

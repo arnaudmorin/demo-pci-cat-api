@@ -11,14 +11,15 @@ function log_handler {
 
 exec &> >(log_handler)
 
-# Update debian password
-echo 'root:mangerduchien42' |chpasswd
+# Update root and debian password
+echo 'root:root' |chpasswd
+echo 'debian:debian' |chpasswd
 rm /root/.ssh/authorized_keys
 
 echo "Adding default route"
 ip route add default via 192.168.1.1
 
-echo "Use google DNS"
+echo "Configure DNS"
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 echo "Update and install some packages"
