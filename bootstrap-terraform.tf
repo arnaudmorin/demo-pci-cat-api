@@ -1,7 +1,7 @@
 # Configure terraform itself
 terraform {
   backend "swift" {
-    path        = "terraform-state"
+    container   = "terraform-state"
     region_name = "SBG3"
   }
 }
