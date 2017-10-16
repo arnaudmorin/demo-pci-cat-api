@@ -12,8 +12,8 @@ function log_handler {
 exec &> >(log_handler)
 
 # Update root and debian password
-echo 'root:root' |chpasswd
-echo 'debian:debian' |chpasswd
+echo 'root:moutarde42' |chpasswd
+echo 'debian:moutarde42' |chpasswd
 rm /root/.ssh/authorized_keys
 
 echo "Adding default route"
