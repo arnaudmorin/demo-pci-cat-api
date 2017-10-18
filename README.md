@@ -2,8 +2,8 @@
 This is a demo using OVH Public Cloud Infrastructure, Terraform and cloud-init stuff
 
 ## You need to source some variables in your environment
-    You need at least source openrc file and some OVH credentials.
-    At the end, you must have those variables set in your environment:
+You need at least source openrc file and some OVH credentials.
+At the end, you must have those variables set in your environment:
 
     OS_AUTH_URL=https://auth.cloud.ovh.net/v2.0/
     OS_TENANT_ID=0d899a6f76d74760a06919233ed0ec51
