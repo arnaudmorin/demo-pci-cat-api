@@ -16,21 +16,12 @@ echo 'root:moutarde42' |chpasswd
 echo 'debian:moutarde42' |chpasswd
 rm /root/.ssh/authorized_keys
 
-echo "Adding default route"
-ip route add default via 192.168.1.1
-
-echo "Configure DNS"
-echo "nameserver 8.8.8.8" > /etc/resolv.conf
-
 echo "Update and install some packages"
 apt-get update
-apt-get -y install git python-pip python-dev vim python-flask python-yaml
-#pip install flask
+apt-get -y install \
+ curl \
+ vim \
+ netcat \
+ tmux
 
-echo "Cloning cat API website"
-cd /root
-git clone https://github.com/arnaudmorin/puppet-demoflask.git
-
-echo "Starting cat API website"
-cd /root/puppet-demoflask
-./start.py &
+echo "Done"
