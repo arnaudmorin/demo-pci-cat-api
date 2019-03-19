@@ -1,5 +1,44 @@
-# demo-pci-cat-api
-This is a demo using OVH Public Cloud Infrastructure and Floating IP
+# Highly Available Cat Website
+
+This is a demo using OVH Public Cloud / OpenStack Infrastructure with Floating IP as Virtual IP to build a HA website.
+
+With cats.
+
+## What you will deploy
+
+You will use a floating IP as virtual IP that can be move between backend1 and backend2.
+Backend1 and backend2 will use VRRP (keepalived) to manage the virtual IP.
+
+
+```
+                     INTERNET
+                        +
+                        |
+                        |
+                        v
+                   42.42.42.42
+                 +-------------+
+                 | floating IP |
+                 +------+------+
+                        |
+                        |
++-----------------------------------------------+
+|192.168.1.0/24         |                       |
+|                       |                       |
+|                +------+------+                |
+|            +---+ virtual IP  +---+            |
+|            |   +-------------+   |            |
+|            |         .10         |            |
+|            |                     |            |
+|            |                     |            |
+|       +----+-----+         +-----+----+       |
+|       | backend1 | +-----+ | backend2 |       |
+|       +----------+  VRRP   +----------+       |
+|          .21                    .22           |
++-----------------------------------------------+
+
+```
+
 
 ## You need to source some variables in your environment
 You need at least source openrc file and some OVH credentials.
@@ -31,6 +70,7 @@ At the end, you must have those variables set in your environment:
 
 ### Create 2 floatings
 1 for rebond
+
 1 for vip
 
     openstack floating ip create Ext-Net
@@ -57,6 +97,3 @@ At the end, you must have those variables set in your environment:
     openstack router remove subnet arnaud-router 192.168.1.0/24
     openstack router delete arnaud-router
     openstack network delete private
-
-
-
