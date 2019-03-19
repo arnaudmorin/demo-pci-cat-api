@@ -7,7 +7,10 @@ With cats.
 ## What you will deploy
 
 You will use a floating IP as virtual IP that can be move between backend1 and backend2.
-Backend1 and backend2 will use VRRP (keepalived) to manage the virtual IP.
+
+Both backends will run an website (a python flash application).
+
+Last but not least, both backends will also use *VRRP (keepalived) to manage the virtual IP*.
 
 
 ```
