@@ -10,7 +10,7 @@ You will use a floating IP as virtual IP that can be move between backend1 and b
 
 Both backends will run an website (a python flash application).
 
-Last but not least, both backends will also use *VRRP (keepalived) to manage the virtual IP*.
+Last but not least, both backends will also use **VRRP (keepalived) to manage the virtual IP**.
 
 
 ```
@@ -52,7 +52,7 @@ At the end, you must have those variables set in your environment:
     OS_TENANT_NAME=6837909462521441
     OS_USERNAME=aaa
     OS_PASSWORD=bbb
-    OS_REGION_NAME=SBG3
+    OS_REGION_NAME=SBG5
     OVH_ENDPOINT=ovh-eu
     OVH_APPLICATION_KEY=ccc
     OVH_APPLICATION_SECRET=ddd
