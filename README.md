@@ -14,32 +14,32 @@ Last but not least, both backends will also use **VRRP (keepalived) to manage th
 
 
 ```
-                     INTERNET
-                        +
-                        |
-                        |
-                        v
-                   42.42.42.42
-                 +-------------+
-                 | floating IP |
-                 +------+------+
-                        |
-                        |
-+-----------------------------------------------+
-|192.168.1.0/24         |                       |
-|                       |                       |
-|                +------+------+                |
-|            +---+ virtual IP  +---+            |
-|            |   +-------------+   |            |
-|            |         .10         |            |
-|            |                     |            |
-|            |                     |            |
-|       +----+-----+         +-----+----+       |
-|       | backend1 | +-----+ | backend2 |       |
-|       +----------+  VRRP   +----------+       |
-|          .21                    .22           |
-+-----------------------------------------------+
-
+                                 INTERNET
+                                    +
+                                    |
+                                    |
+                                    v
+                               42.42.42.42
+                             +-------------+
+                             | floating IP |
+                             +------+------+
+                                    |
+                                    |
+            +-----------------------------------------------+
+            |192.168.1.0/24         |                       |
+            |                       |                       |
+            |                +------+------+                |
+            |            +---+ virtual IP  +---+            |
+            |            |   +-------------+   |            |
+            |            |         .10         |            |
+            |            |                     |            |
+            |            |                     |            |
+            |       +----+-----+         +-----+----+       |
+            |       | backend1 | +-----+ | backend2 |       |
+            |       +----------+  VRRP   +----------+       |
+            |          .21                    .22           |
+            +-----------------------------------------------+
+            
 ```
 
 
@@ -64,7 +64,14 @@ At the end, you must have those variables set in your environment:
 
 ### Create network
     openstack network create private
-    openstack subnet create --dns-nameserver 213.186.33.99 --gateway 192.168.1.1 --subnet-range 192.168.1.0/24 --allocation-pool start=192.168.1.50,end=192.168.1.99 --network private --dhcp 192.168.1.0/24
+    openstack subnet create \
+     --dns-nameserver 213.186.33.99 \
+     --gateway 192.168.1.1 \
+     --subnet-range 192.168.1.0/24 \
+     --allocation-pool start=192.168.1.50,end=192.168.1.99 \
+     --network private \
+     --dhcp \
+     192.168.1.0/24
 
 ### Create router
     openstack router create router
@@ -80,15 +87,36 @@ At the end, you must have those variables set in your environment:
     openstack floating ip create Ext-Net
 
 ### Associate first floating to virtual ip port
-    openstack port create --fixed-ip subnet=192.168.1.0/24,ip-address=192.168.1.10 --network private vip
+    openstack port create \
+     --fixed-ip subnet=192.168.1.0/24,ip-address=192.168.1.10 \
+     --network private \
+     vip
     openstack floating ip set --port vip 42.42.42.42
 
 ### Create the rebond
-    openstack server create --key-name arnaud-ovh --image 'Debian 9' --flavor c2-7 --net private --user-data userdata/rebond.sh rebond
+    openstack server create \
+     --key-name arnaud-ovh \
+     --image 'Debian 9' \
+     --flavor c2-7 \
+     --net private \
+     --user-data userdata/rebond.sh \
+     rebond
 
 ### Create the 2 backends
-    openstack server create --key-name arnaud-ovh --image 'Debian 9' --flavor c2-7 --net private --user-data userdata/backend.sh arnaud1
-    openstack server create --key-name arnaud-ovh --image 'Debian 9' --flavor c2-7 --net private --user-data userdata/backend.sh arnaud2
+    openstack server create \
+     --key-name arnaud-ovh \
+     --image 'Debian 9' \
+     --flavor c2-7 \
+     --net private \
+     --user-data userdata/backend.sh \
+     arnaud1
+    openstack server create \
+     --key-name arnaud-ovh \
+     --image 'Debian 9' \
+     --flavor c2-7 \
+     --net private \
+     --user-data userdata/backend.sh \
+     arnaud2
 
 ### Wait for rebond to be up and set the second floating IP
     openstack server add floating ip rebond 42.42.42.43
@@ -97,6 +125,6 @@ At the end, you must have those variables set in your environment:
     openstack server delete rebond arnaud1 arnaud2
     openstack floating ip list -f value -c ID | xargs openstack floating ip delete
     openstack port delete vip
-    openstack router remove subnet arnaud-router 192.168.1.0/24
-    openstack router delete arnaud-router
+    openstack router remove subnet router 192.168.1.0/24
+    openstack router delete router
     openstack network delete private
