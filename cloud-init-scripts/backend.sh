@@ -24,13 +24,13 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 echo "Update and install some packages"
 apt-get update
-apt-get -y install git python-pip python-dev vim python-flask python-yaml
+apt-get -y install git python3-pip python3-dev vim python3-flask python3-yaml
 #pip install flask
 
 echo "Cloning cat API website"
 cd /root
-git clone https://github.com/arnaudmorin/puppet-demoflask.git
+git clone https://github.com/arnaudmorin/demo-flask.git
 
 echo "Starting cat API website"
-cd /root/puppet-demoflask
+cd /root/demo-flask
 ./start.py &
